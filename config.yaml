@@ -1,0 +1,18 @@
+app:
+  port: 8080
+
+redis:
+  addr: localhost:6379
+  password: ""
+  db: 0
+
+lock:
+  ttl_seconds: 10
+
+rate_limit:
+  limit: 5
+  window_seconds: 10
+
+pubsub:
+  channel: notifications
+  consumer_count: 2
