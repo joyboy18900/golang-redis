@@ -24,14 +24,20 @@ func main() {
 	defer redisClient.Close()
 
 	lockTTL := time.Duration(viper.GetInt("lock.ttl_seconds")) * time.Second
+	rateLimit := viper.GetInt("rate_limit.limit")
+	rateWindow := time.Duration(viper.GetInt("rate_limit.window_seconds")) * time.Second
 
 	lockRepo := repository.NewLockRepositoryRedis(redisClient)
 	lockSvc := service.NewLockService(lockRepo, lockTTL)
 	lockHdlr := handler.NewLockHandler(lockSvc)
 
+	rateLimiterRepo := repository.NewRateLimiterRepositoryRedis(redisClient)
+	rateLimiterSvc := service.NewRateLimiterService(rateLimiterRepo, rateLimit, rateWindow)
+
 	app := fiber.New()
 
 	app.Post("/jobs/run", lockHdlr.RunCriticalSection)
+	app.Get("/ping", handler.RateLimitMiddleware(rateLimiterSvc), handler.Ping)
 
 	port := viper.GetString("app.port")
 	logs.Info("server started on port " + port)
