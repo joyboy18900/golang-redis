@@ -2,9 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/signal"
+	"strconv"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 
 	"golang-redis/handler"
@@ -34,17 +39,46 @@ func main() {
 	rateLimiterRepo := repository.NewRateLimiterRepositoryRedis(redisClient)
 	rateLimiterSvc := service.NewRateLimiterService(rateLimiterRepo, rateLimit, rateWindow)
 
+	pubsubRepo := repository.NewPubSubRepositoryRedis(redisClient)
+	pubsubSvc := service.NewPubSubService(pubsubRepo)
+	pubsubHdlr := handler.NewPubSubHandler(pubsubSvc)
+
 	app := fiber.New()
 
 	app.Post("/jobs/run", lockHdlr.RunCriticalSection)
 	app.Get("/ping", handler.RateLimitMiddleware(rateLimiterSvc), handler.Ping)
+	app.Post("/messages", pubsubHdlr.Publish)
 
-	port := viper.GetString("app.port")
-	logs.Info("server started on port " + port)
-	if err := app.Listen(":" + port); err != nil {
-		logs.Error(err)
-		os.Exit(1)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	var wg sync.WaitGroup
+	channel := viper.GetString("pubsub.channel")
+	for i := 1; i <= viper.GetInt("pubsub.consumer_count"); i++ {
+		name := "consumer-" + strconv.Itoa(i)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := pubsubSvc.RunConsumer(ctx, channel, name); err != nil && !errors.Is(err, context.Canceled) {
+				logs.Error(err)
+			}
+		}()
 	}
+
+	go func() {
+		port := viper.GetString("app.port")
+		logs.Info("server started on port " + port)
+		if err := app.Listen(":" + port); err != nil {
+			logs.Error(err)
+		}
+	}()
+
+	<-ctx.Done()
+	logs.Info("shutting down")
+	if err := app.Shutdown(); err != nil {
+		logs.Error(err)
+	}
+	wg.Wait()
 }
 
 func initConfig() {
