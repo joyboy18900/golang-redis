@@ -25,9 +25,9 @@ See `curl/flow.md` for full request/response examples, including firing
 `/jobs/run` at both app instances at the same time.
 
 - `/jobs/run`'s lock is a single-node `SET NX PX` via redsync, not full
-  multi-node Redlock, and gives no fencing token - fine for best-effort
-  de-duplication, not for invariants where a duplicate run is a
-  correctness bug (use a DB-level lock for those instead).
+  multi-node Redlock, and gives no fencing token. It suits best-effort
+  de-duplication only; use a DB-level lock where a duplicate run would be
+  a correctness bug.
 
 ## Tests
 
