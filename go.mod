@@ -3,9 +3,11 @@ module golang-redis
 go 1.26.4
 
 require (
+	github.com/go-redsync/redsync/v4 v4.17.0
 	github.com/gofiber/fiber/v2 v2.52.15
 	github.com/redis/go-redis/v9 v9.22.0
 	github.com/spf13/viper v1.21.0
+	go.uber.org/mock v0.6.0
 	go.uber.org/zap v1.28.0
 )
 
@@ -31,12 +33,11 @@ require (
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	go.uber.org/mock v0.6.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.27.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
 )
