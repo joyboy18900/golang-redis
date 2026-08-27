@@ -7,7 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"golang-redis/handler"
 	"golang-redis/logs"
+	"golang-redis/repository"
+	"golang-redis/service"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
@@ -20,7 +23,15 @@ func main() {
 	redisClient := initRedis()
 	defer redisClient.Close()
 
+	lockTTL := time.Duration(viper.GetInt("lock.ttl_seconds")) * time.Second
+
+	lockRepo := repository.NewLockRepositoryRedis(redisClient)
+	lockSvc := service.NewLockService(lockRepo, lockTTL)
+	lockHdlr := handler.NewLockHandler(lockSvc)
+
 	app := fiber.New()
+
+	app.Post("/jobs/run", lockHdlr.RunCriticalSection)
 
 	port := viper.GetString("app.port")
 	logs.Info("server started on port " + port)
